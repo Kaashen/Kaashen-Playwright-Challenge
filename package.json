@@ -1,0 +1,21 @@
+{
+  "name": "kaashen-playwright-challenge",
+  "version": "1.0.0",
+  "type": "module",
+  "description": "",
+  "main": "index.js",
+  "scripts": {
+  "test": "playwright test",
+  "test:ui": "playwright test --project=ui",
+  "test:api": "playwright test --project=api",
+  "report": "playwright show-report",
+  "report:monocart": "start monocart-report/index.html"
+},
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "devDependencies": {
+    "@playwright/test": "^1.61.1",
+    "monocart-reporter": "^2.12.0"
+  }
+}
