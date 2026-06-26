@@ -56,7 +56,7 @@ jobs:
           username: ${{ secrets.MAIL_USERNAME }}
           password: ${{ secrets.MAIL_PASSWORD }}
           subject: "${{ job.status == 'success' && '✅' || '❌' }} UI Tests – ${{ github.repository }}"
-          to: kaashenchandra@gmail.com
+          to: ${{ secrets.MAIL_TO }}
           from: ${{ secrets.MAIL_USERNAME }}
           body: |
             Job: UI Tests (SauceDemo)
@@ -128,7 +128,7 @@ jobs:
           username: ${{ secrets.MAIL_USERNAME }}
           password: ${{ secrets.MAIL_PASSWORD }}
           subject: "${{ job.status == 'success' && '✅' || '❌' }} API Tests – ${{ github.repository }}"
-          to: kaashenchandra@gmail.com
+          to: ${{ secrets.MAIL_TO }}
           from: ${{ secrets.MAIL_USERNAME }}
           body: |
             Job: API Tests (Restful-Booker)
