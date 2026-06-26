@@ -71,19 +71,6 @@ jobs:
       - name: Run API tests
         run: npm run test:api
 
-      - name: Generate snapshots
-        if: failure()
-        run: npx playwright test tests/api/ --update-snapshots
-
-      - name: Commit snapshots
-        if: failure()
-        run: |
-          git config user.name "github-actions"
-          git config user.email "github-actions@github.com"
-          git add tests/**-snapshots/
-          git diff --staged --quiet || git commit -m "chore: update playwright snapshots"
-          git push
-
       - name: Upload API Playwright report
         uses: actions/upload-artifact@v4
         if: always()
