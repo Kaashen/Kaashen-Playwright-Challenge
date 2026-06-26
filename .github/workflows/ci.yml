@@ -7,7 +7,8 @@ on:
     branches: [main]
 
 jobs:
-  test:
+  test-ui:
+    name: UI Tests (SauceDemo)
     runs-on: ubuntu-latest
     timeout-minutes: 15
 
@@ -27,21 +28,61 @@ jobs:
       - name: Install Playwright browsers
         run: npx playwright install chromium --with-deps
 
-      - name: Run all tests
-        run: npm test
+      - name: Run UI tests
+        run: npm run test:ui
 
-      - name: Upload Playwright report
+      - name: Upload UI Playwright report
         uses: actions/upload-artifact@v4
         if: always()
         with:
-          name: playwright-report
+          name: playwright-report-ui
           path: playwright-report/
           retention-days: 14
 
-      - name: Upload Monocart report
+      - name: Upload UI Monocart report
         uses: actions/upload-artifact@v4
         if: always()
         with:
-          name: monocart-report
+          name: monocart-report-ui
+          path: monocart-report/
+          retention-days: 14
+
+  test-api:
+    name: API Tests (Restful-Booker)
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+          cache: 'npm'
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Install Playwright browsers
+        run: npx playwright install chromium --with-deps
+
+      - name: Run API tests
+        run: npm run test:api
+
+      - name: Upload API Playwright report
+        uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: playwright-report-api
+          path: playwright-report/
+          retention-days: 14
+
+      - name: Upload API Monocart report
+        uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: monocart-report-api
           path: monocart-report/
           retention-days: 14
