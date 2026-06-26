@@ -13,7 +13,7 @@ Automated UI and API test framework using [Playwright](https://playwright.dev/),
 
 ```mermaid
 flowchart TD
-    A[Developer pushes code] --> B{GitHub Actions CI}
+    A[Developer pushes code\nor manual trigger] --> B{GitHub Actions CI}
 
     B --> C[Job: UI Tests]
     B --> D[Job: API Tests]
@@ -33,9 +33,8 @@ flowchart TD
     D3 --> D4[npm run test:api]
     D4 --> D5[playwright.config.js\nproject: api\ntestMatch: tests/api/**]
     D5 --> D6{Tests pass?}
-    D6 -->|No| D6a[Generate + commit snapshots]
     D6 -->|Yes| D7[Upload API Reports]
-    D6a --> D7
+    D6 -->|No| D7
 
     C7 --> E[Job: Notify]
     D7 --> E
@@ -69,7 +68,8 @@ Kaashen-Playwright-Challenge/
 │   │   ├── auth.tests.js
 │   │   ├── inventory.tests.js
 │   │   ├── cart.tests.js
-│   │   └── checkout.tests.js
+│   │   ├── checkout.tests.js
+│   │   └── visual.tests.js
 │   └── api/                        # Restful-Booker API tests
 │       ├── 01-health.tests.js
 │       ├── 02-auth.tests.js
@@ -84,28 +84,29 @@ Kaashen-Playwright-Challenge/
 
 ## Test Types
 
-Both UI and API tests share the same capabilities: **snapshot assertions** for regression detection and **Docker support** for generating Linux-compatible snapshots that match CI.
+Both UI and API tests support **snapshot assertions** (`toMatchSnapshot()`) for regression detection and **Docker** for generating Linux-compatible baselines that match CI. Tests are tagged `@smoke` or `@regression` for selective runs.
 
 ### UI Tests — SauceDemo
 
-Browser-based end-to-end tests using the `Desktop Chrome` device profile against `https://www.saucedemo.com`. Uses the **Page Object Model** pattern — each page has a corresponding class in `pages/`. UI tests use `toMatchSnapshot()` to lock in screenshots and state at key points, and Docker is used to generate the `*-linux.json` snapshot baselines that CI compares against.
+Browser-based end-to-end tests using the `Desktop Chrome` device profile against `https://www.saucedemo.com`. Uses the **Page Object Model** pattern — each page has a corresponding class in `pages/`.
 
 | File | Suite | Tests |
 |------|-------|-------|
-| `auth.tests.js` | Authentication | Valid login, locked user, invalid credentials, logout |
-| `inventory.tests.js` | Inventory | Product count, sort by price, sort by name, item detail |
-| `cart.tests.js` | Cart | Add/remove items, badge count, cart contents |
-| `checkout.tests.js` | Checkout | Complete flow, field validation, cancel |
+| `auth.tests.js` | Authentication | Valid login, locked user, invalid credentials, empty credentials, problem user login, problem user broken sort, direct URL redirect, logout |
+| `inventory.tests.js` | Inventory | 6 products, sort A-Z, sort Z-A, sort price low-high, sort price high-low, item detail, add to cart from detail |
+| `cart.tests.js` | Cart | Add item, add multiple items, remove from inventory, remove from cart page, cart contents, cart persists after refresh |
+| `checkout.tests.js` | Checkout | Complete flow, multiple items, missing first name, missing last name, missing zip code, cancel |
+| `visual.tests.js` | Visual Regression | Login page, inventory page, cart page, checkout page |
 
 ### API Tests — Restful-Booker
 
-Headless API tests using Playwright's built-in `request` context against `https://restful-booker.herokuapp.com`. Uses the **ApiHelper** class in `helpers/apiHelper.js` to wrap all HTTP calls. Like UI tests, all API tests use `toMatchSnapshot()` to snapshot response shapes as `*-linux.json` files for regression detection, and Docker is used to generate those baselines.
+Headless API tests using Playwright's built-in `request` context against `https://restful-booker.herokuapp.com`. Uses the **ApiHelper** class in `helpers/apiHelper.js` to wrap all HTTP calls. All API tests use `toMatchSnapshot()` to snapshot response shapes as `*-linux.json` files for regression detection.
 
 | File | Suite | Tests |
 |------|-------|-------|
 | `01-health.tests.js` | Health Check | GET /ping returns 201 |
-| `02-auth.tests.js` | Authentication | Valid token, invalid credentials, empty credentials, missing field |
-| `03-booking.tests.js` | Booking CRUD | GET list, filter by name, filter by dates, POST create, schema validation, GET by ID, invalid ID, PUT update, PUT without auth, PATCH partial update, DELETE without auth, DELETE and verify |
+| `02-auth.tests.js` | Authentication | Valid token, invalid credentials, empty credentials, missing password, missing username, invalid token returns 403 |
+| `03-booking.tests.js` | Booking CRUD | GET list, filter by firstname, filter by lastname, filter by dates, response time, POST create, POST response time, schema validation, missing fields returns 500, GET by ID, invalid ID returns 404, PUT update, PUT without auth, PUT invalid ID returns 405, PATCH update, PATCH without auth, DELETE without auth, DELETE invalid ID returns 405, DELETE and verify |
 
 ---
 
@@ -148,26 +149,27 @@ No `.env` files, credentials, or API keys are required — both SauceDemo and Re
 
 ### Snapshot setup (required before pushing new tests)
 
-Snapshots must be generated inside a Linux Docker container to match the CI environment. Run once after cloning, and again whenever you add a new `toMatchSnapshot()` assertion.
+Snapshots must be generated inside a Linux Docker container to match the CI environment. Run once after cloning, and again whenever you add a new `toMatchSnapshot()` or `toHaveScreenshot()` assertion.
 
-**Windows (PowerShell):**
+**Step 1 — Generate snapshots (Windows PowerShell):**
 ```powershell
 docker run --rm -v "${PWD}:/work" -w /work mcr.microsoft.com/playwright:v1.61.0-noble `
   npx playwright test --update-snapshots
 ```
 
-**Mac/Linux:**
+**Step 1 — Generate snapshots (Mac/Linux):**
 ```bash
 docker run --rm -v $(pwd):/work -w /work mcr.microsoft.com/playwright:v1.61.0-noble \
   npx playwright test --update-snapshots
 ```
 
-Or via docker-compose:
-```bash
-docker-compose up
+**Step 2 — Verify tests pass against new snapshots:**
+```powershell
+docker run --rm -v "${PWD}:/work" -w /work mcr.microsoft.com/playwright:v1.61.0-noble `
+  npx playwright test
 ```
 
-Then commit the generated `*-linux.json` snapshot files:
+Then commit the generated snapshot files:
 ```bash
 git add tests/
 git commit -m "Update snapshots"
@@ -179,90 +181,45 @@ git push
 ## Running Tests
 
 ### All tests
-
 ```bash
 npm test
 ```
 
 ### UI tests only
-
 ```bash
 npm run test:ui
 ```
 
 ### API tests only
-
 ```bash
 npm run test:api
 ```
 
 ### Smoke tests only
-
 ```bash
 npx playwright test --grep @smoke
 ```
 
 ### Regression tests only
-
 ```bash
 npx playwright test --grep @regression
 ```
 
 ### One specific test file
-
 ```bash
 npx playwright test tests/api/02-auth.tests.js
 npx playwright test tests/ui/auth.tests.js
 ```
 
 ### One specific test by name
-
 ```bash
 npx playwright test --grep "valid credentials return a token"
 ```
 
 ### With headed browser (UI tests)
-
 ```bash
 npx playwright test --project=ui --headed
 ```
-
----
-
-## Snapshots
-
-Snapshots must be generated inside a Linux Docker container to match CI. Always run the two-step process — update first, then verify.
-
-### Step 1 — Generate snapshots (Windows PowerShell)
-
-```powershell
-docker run --rm -v "${PWD}:/work" -w /work mcr.microsoft.com/playwright:v1.61.0-noble `
-  npx playwright test --update-snapshots
-```
-
-### Step 1 — Generate snapshots (Mac/Linux)
-
-```bash
-docker run --rm -v $(pwd):/work -w /work mcr.microsoft.com/playwright:v1.61.0-noble \
-  npx playwright test --update-snapshots
-```
-
-### Step 2 — Run tests against new snapshots (without updating)
-
-```powershell
-docker run --rm -v "${PWD}:/work" -w /work mcr.microsoft.com/playwright:v1.61.0-noble `
-  npx playwright test
-```
-
-Then commit the generated `*-linux.json` and `*-linux.png` snapshot files:
-
-```bash
-git add tests/
-git commit -m "Update snapshots"
-git push
-```
-
-> **Note:** Running `--update-snapshots` locally without Docker generates `*-win32.json` / `*-darwin.json` files which CI ignores. Always use Docker to generate the `*-linux.json` / `*-linux.png` baselines.
 
 ---
 
@@ -271,43 +228,48 @@ git push
 Docker runs tests inside a Linux container matching the CI environment — required for generating `*-linux.json` snapshots that CI uses for comparison. This applies equally to both UI and API tests.
 
 ### Run via docker-compose (snapshot generation)
-
 ```bash
 docker-compose up
 ```
 
-This runs `playwright.docker.config.js` with `--update-snapshots`, writing Linux-compatible snapshot files to `tests/**-snapshots/`.
-
 ### Run specific tests in Docker (PowerShell)
 
 ```powershell
-# All API tests + update snapshots
-docker run --rm -v "${PWD}:/work" -w /work mcr.microsoft.com/playwright:v1.61.0-noble `
-  npx playwright test tests/api/ --update-snapshots
-
-# All UI tests + update snapshots
-docker run --rm -v "${PWD}:/work" -w /work mcr.microsoft.com/playwright:v1.61.0-noble `
-  npx playwright test tests/ui/ --update-snapshots
-
 # All tests + update snapshots
 docker run --rm -v "${PWD}:/work" -w /work mcr.microsoft.com/playwright:v1.61.0-noble `
   npx playwright test --update-snapshots
+
+# UI tests only + update snapshots
+docker run --rm -v "${PWD}:/work" -w /work mcr.microsoft.com/playwright:v1.61.0-noble `
+  npx playwright test tests/ui/ --update-snapshots
+
+# API tests only + update snapshots
+docker run --rm -v "${PWD}:/work" -w /work mcr.microsoft.com/playwright:v1.61.0-noble `
+  npx playwright test tests/api/ --update-snapshots
+
+# Run all tests without updating snapshots
+docker run --rm -v "${PWD}:/work" -w /work mcr.microsoft.com/playwright:v1.61.0-noble `
+  npx playwright test
 ```
 
-### Run specific tests in Docker (bash/Mac/Linux)
+### Run specific tests in Docker (Mac/Linux)
 
 ```bash
-# All API tests + update snapshots
-docker run --rm -v $(pwd):/work -w /work mcr.microsoft.com/playwright:v1.61.0-noble \
-  npx playwright test tests/api/ --update-snapshots
-
-# All UI tests + update snapshots
-docker run --rm -v $(pwd):/work -w /work mcr.microsoft.com/playwright:v1.61.0-noble \
-  npx playwright test tests/ui/ --update-snapshots
-
 # All tests + update snapshots
 docker run --rm -v $(pwd):/work -w /work mcr.microsoft.com/playwright:v1.61.0-noble \
   npx playwright test --update-snapshots
+
+# UI tests only + update snapshots
+docker run --rm -v $(pwd):/work -w /work mcr.microsoft.com/playwright:v1.61.0-noble \
+  npx playwright test tests/ui/ --update-snapshots
+
+# API tests only + update snapshots
+docker run --rm -v $(pwd):/work -w /work mcr.microsoft.com/playwright:v1.61.0-noble \
+  npx playwright test tests/api/ --update-snapshots
+
+# Run all tests without updating snapshots
+docker run --rm -v $(pwd):/work -w /work mcr.microsoft.com/playwright:v1.61.0-noble \
+  npx playwright test
 ```
 
 ### Normal Playwright vs Docker — when to use which
@@ -324,23 +286,24 @@ docker run --rm -v $(pwd):/work -w /work mcr.microsoft.com/playwright:v1.61.0-no
 
 ## Adding a Test
 
-Both UI and API tests follow the same pattern: write the test, add a `toMatchSnapshot()` assertion, generate the Linux baseline with Docker, then commit the snapshot files.
+Both UI and API tests follow the same pattern: write the test, add a snapshot assertion, generate the Linux baseline with Docker, then commit.
 
 ### Adding a UI test
 
-1. Create or open a spec file in `tests/ui/`
+1. Create or open a file in `tests/ui/`
 2. Import the relevant page object from `pages/`
-3. Write your test with a snapshot assertion:
+3. Write your test with a tag and snapshot:
 
 ```js
 import { test, expect } from '@playwright/test';
+import { users } from '../../helpers/testData.js';
 import { LoginPage } from '../../pages/LoginPage.js';
 
 test.describe('My new suite', () => {
-  test('does something', async ({ page }) => {
+  test('@regression does something', async ({ page }) => {
     const loginPage = new LoginPage(page);
     await loginPage.goto();
-    await loginPage.login('standard_user', 'secret_sauce');
+    await loginPage.login(users.valid.username, users.valid.password);
     await expect(page).toHaveURL(/inventory/);
     expect(JSON.stringify({ loggedIn: true }))
       .toMatchSnapshot('my-ui-snapshot.json');
@@ -348,28 +311,30 @@ test.describe('My new suite', () => {
 });
 ```
 
-4. Generate the Linux snapshot before pushing:
+4. Generate the Linux snapshot and verify:
 
 ```powershell
 docker run --rm -v "${PWD}:/work" -w /work mcr.microsoft.com/playwright:v1.61.0-noble `
-  npx playwright test tests/ui/my-new-spec.tests.js --update-snapshots
+  npx playwright test tests/ui/ --update-snapshots
+
+docker run --rm -v "${PWD}:/work" -w /work mcr.microsoft.com/playwright:v1.61.0-noble `
+  npx playwright test tests/ui/
 ```
 
-Then commit the generated `tests/ui/*.tests.js-snapshots/*-linux.json` files.
+5. Commit the generated `tests/ui/*.tests.js-snapshots/*-linux.json` files.
 
 ### Adding an API test
 
-1. Create or open a spec file in `tests/api/`
+1. Create or open a file in `tests/api/`
 2. Import `ApiHelper` and test data from `helpers/`
-3. Write your test with a snapshot assertion:
+3. Write your test with a tag and snapshot:
 
 ```js
 import { test, expect } from '@playwright/test';
-import { auth } from '../../helpers/testData.js';
 import { ApiHelper } from '../../helpers/apiHelper.js';
 
 test.describe('My API suite', () => {
-  test('GET /booking returns 200', async ({ request }) => {
+  test('@regression GET /booking returns 200', async ({ request }) => {
     const api = new ApiHelper(request);
     const response = await api.getBookings();
     expect(response.status()).toBe(200);
@@ -380,14 +345,17 @@ test.describe('My API suite', () => {
 });
 ```
 
-4. Generate the Linux snapshot before pushing:
+4. Generate the Linux snapshot and verify:
 
 ```powershell
 docker run --rm -v "${PWD}:/work" -w /work mcr.microsoft.com/playwright:v1.61.0-noble `
-  npx playwright test tests/api/my-new-spec.tests.js --update-snapshots
+  npx playwright test tests/api/ --update-snapshots
+
+docker run --rm -v "${PWD}:/work" -w /work mcr.microsoft.com/playwright:v1.61.0-noble `
+  npx playwright test tests/api/
 ```
 
-Then commit the generated `tests/api/*.tests.js-snapshots/*-linux.json` files.
+5. Commit the generated `tests/api/*.tests.js-snapshots/*-linux.json` files.
 
 ---
 
@@ -407,9 +375,14 @@ Reports are also emailed automatically after every CI run with all four reports 
 
 ## CI/CD
 
-Tests run automatically on every push and pull request to `main` via GitHub Actions (`.github/workflows/ci.yml`).
+Tests run automatically via GitHub Actions (`.github/workflows/ci.yml`) on:
 
-The pipeline runs UI and API jobs in parallel, then a `notify` job sends a combined email with all four report files attached.
+- Every **push** to `main`
+- Every **pull request** to `main`
+- **Daily at 6am UTC** (8am South Africa time) via scheduled cron
+- **Manually** via the Actions tab → Run workflow button
+
+The pipeline runs UI and API jobs in parallel, then a `notify` job sends a combined email with all four report files attached. Snapshots are **never auto-updated in CI** — if a snapshot mismatch causes a failure, update snapshots locally using Docker, then push.
 
 ### Required GitHub Secrets
 
