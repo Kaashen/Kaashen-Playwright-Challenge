@@ -66,14 +66,14 @@ Kaashen-Playwright-Challenge/
 ├── test-data/                      # JSON fixture files
 ├── tests/
 │   ├── ui/                         # SauceDemo browser tests
-│   │   ├── auth.spec.js
-│   │   ├── inventory.spec.js
-│   │   ├── cart.spec.js
-│   │   └── checkout.spec.js
+│   │   ├── auth.tests.js
+│   │   ├── inventory.tests.js
+│   │   ├── cart.tests.js
+│   │   └── checkout.tests.js
 │   └── api/                        # Restful-Booker API tests
-│       ├── 01-health.spec.js
-│       ├── 02-auth.spec.js
-│       └── 03-booking.spec.js
+│       ├── 01-health.tests.js
+│       ├── 02-auth.tests.js
+│       └── 03-booking.tests.js
 ├── playwright.config.js            # Main config (UI + API projects)
 ├── playwright.docker.config.js     # Docker config (snapshot generation)
 ├── docker-compose.yml              # Docker runner
@@ -92,10 +92,10 @@ Browser-based end-to-end tests using the `Desktop Chrome` device profile against
 
 | File | Suite | Tests |
 |------|-------|-------|
-| `auth.spec.js` | Authentication | Valid login, locked user, invalid credentials, logout |
-| `inventory.spec.js` | Inventory | Product count, sort by price, sort by name, item detail |
-| `cart.spec.js` | Cart | Add/remove items, badge count, cart contents |
-| `checkout.spec.js` | Checkout | Complete flow, field validation, cancel |
+| `auth.tests.js` | Authentication | Valid login, locked user, invalid credentials, logout |
+| `inventory.tests.js` | Inventory | Product count, sort by price, sort by name, item detail |
+| `cart.tests.js` | Cart | Add/remove items, badge count, cart contents |
+| `checkout.tests.js` | Checkout | Complete flow, field validation, cancel |
 
 ### API Tests — Restful-Booker
 
@@ -103,9 +103,9 @@ Headless API tests using Playwright's built-in `request` context against `https:
 
 | File | Suite | Tests |
 |------|-------|-------|
-| `01-health.spec.js` | Health Check | GET /ping returns 201 |
-| `02-auth.spec.js` | Authentication | Valid token, invalid credentials, empty credentials, missing field |
-| `03-booking.spec.js` | Booking CRUD | GET list, filter by name, filter by dates, POST create, schema validation, GET by ID, invalid ID, PUT update, PUT without auth, PATCH partial update, DELETE without auth, DELETE and verify |
+| `01-health.tests.js` | Health Check | GET /ping returns 201 |
+| `02-auth.tests.js` | Authentication | Valid token, invalid credentials, empty credentials, missing field |
+| `03-booking.tests.js` | Booking CRUD | GET list, filter by name, filter by dates, POST create, schema validation, GET by ID, invalid ID, PUT update, PUT without auth, PATCH partial update, DELETE without auth, DELETE and verify |
 
 ---
 
@@ -196,11 +196,23 @@ npm run test:ui
 npm run test:api
 ```
 
+### Smoke tests only
+
+```bash
+npx playwright test --grep @smoke
+```
+
+### Regression tests only
+
+```bash
+npx playwright test --grep @regression
+```
+
 ### One specific test file
 
 ```bash
-npx playwright test tests/api/02-auth.spec.js
-npx playwright test tests/ui/auth.spec.js
+npx playwright test tests/api/02-auth.tests.js
+npx playwright test tests/ui/auth.tests.js
 ```
 
 ### One specific test by name
@@ -215,20 +227,42 @@ npx playwright test --grep "valid credentials return a token"
 npx playwright test --project=ui --headed
 ```
 
-### Update snapshots (after adding new snapshot assertions)
+---
 
-```bash
-# API tests only
-npx playwright test tests/api/ --update-snapshots
+## Snapshots
 
-# UI tests only
-npx playwright test tests/ui/ --update-snapshots
+Snapshots must be generated inside a Linux Docker container to match CI. Always run the two-step process — update first, then verify.
 
-# All tests
-npx playwright test --update-snapshots
+### Step 1 — Generate snapshots (Windows PowerShell)
+
+```powershell
+docker run --rm -v "${PWD}:/work" -w /work mcr.microsoft.com/playwright:v1.61.0-noble `
+  npx playwright test --update-snapshots
 ```
 
-> **Note:** Running `--update-snapshots` locally on Windows/Mac generates `*-win32.json` / `*-darwin.json` files. CI requires `*-linux.json`. Use Docker (see below) to generate the correct baseline files.
+### Step 1 — Generate snapshots (Mac/Linux)
+
+```bash
+docker run --rm -v $(pwd):/work -w /work mcr.microsoft.com/playwright:v1.61.0-noble \
+  npx playwright test --update-snapshots
+```
+
+### Step 2 — Run tests against new snapshots (without updating)
+
+```powershell
+docker run --rm -v "${PWD}:/work" -w /work mcr.microsoft.com/playwright:v1.61.0-noble `
+  npx playwright test
+```
+
+Then commit the generated `*-linux.json` and `*-linux.png` snapshot files:
+
+```bash
+git add tests/
+git commit -m "Update snapshots"
+git push
+```
+
+> **Note:** Running `--update-snapshots` locally without Docker generates `*-win32.json` / `*-darwin.json` files which CI ignores. Always use Docker to generate the `*-linux.json` / `*-linux.png` baselines.
 
 ---
 
@@ -318,10 +352,10 @@ test.describe('My new suite', () => {
 
 ```powershell
 docker run --rm -v "${PWD}:/work" -w /work mcr.microsoft.com/playwright:v1.61.0-noble `
-  npx playwright test tests/ui/my-new-spec.spec.js --update-snapshots
+  npx playwright test tests/ui/my-new-spec.tests.js --update-snapshots
 ```
 
-Then commit the generated `tests/ui/*.spec.js-snapshots/*-linux.json` files.
+Then commit the generated `tests/ui/*.tests.js-snapshots/*-linux.json` files.
 
 ### Adding an API test
 
@@ -350,10 +384,10 @@ test.describe('My API suite', () => {
 
 ```powershell
 docker run --rm -v "${PWD}:/work" -w /work mcr.microsoft.com/playwright:v1.61.0-noble `
-  npx playwright test tests/api/my-new-spec.spec.js --update-snapshots
+  npx playwright test tests/api/my-new-spec.tests.js --update-snapshots
 ```
 
-Then commit the generated `tests/api/*.spec.js-snapshots/*-linux.json` files.
+Then commit the generated `tests/api/*.tests.js-snapshots/*-linux.json` files.
 
 ---
 

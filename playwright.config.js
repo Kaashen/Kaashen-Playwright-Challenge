@@ -11,6 +11,7 @@ export default defineConfig({
       outputFile: './monocart-report/index.html',
     }],
     ['list'],
+    ...(process.env.CI ? [['github']] : []),
   ],
   use: {
     screenshot: 'only-on-failure',

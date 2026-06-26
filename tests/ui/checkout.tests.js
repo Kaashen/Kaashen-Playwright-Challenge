@@ -17,7 +17,7 @@ test.describe('Checkout', () => {
     await cartPage.goto();
   });
 
-  test('complete checkout flow', async ({ page }) => {
+  test('@smoke complete checkout flow', async ({ page }) => {
     const cartPage = new CartPage(page);
     const checkoutPage = new CheckoutPage(page);
     await cartPage.checkout();
@@ -28,7 +28,25 @@ test.describe('Checkout', () => {
     await expect(checkoutPage.confirmationHeader).toHaveText('Thank you for your order!');
   });
 
-  test('checkout fails without customer info', async ({ page }) => {
+test('@regression checkout with multiple items', async ({ page }) => {
+  const inventoryPage = new InventoryPage(page);
+  const cartPage = new CartPage(page);
+  const checkoutPage = new CheckoutPage(page);
+  await page.locator('.shopping_cart_link').click();
+  await page.locator('[data-test="continue-shopping"]').click();
+  await inventoryPage.addToCartByName('sauce-labs-bike-light');
+  await inventoryPage.addToCartByName('sauce-labs-bolt-t-shirt');
+  await cartPage.goto();
+  expect(await cartPage.getItemCount()).toBe(3);
+  await cartPage.checkout();
+  await checkoutPage.fillCustomerInfo('John', 'Doe', '12345');
+  await checkoutPage.continue();
+  await expect(checkoutPage.summaryInfo).toBeVisible();
+  await checkoutPage.finish();
+  await expect(checkoutPage.confirmationHeader).toHaveText('Thank you for your order!');
+});
+
+  test('@regression checkout fails without first name', async ({ page }) => {
     const cartPage = new CartPage(page);
     const checkoutPage = new CheckoutPage(page);
     await cartPage.checkout();
@@ -36,30 +54,30 @@ test.describe('Checkout', () => {
     await expect(checkoutPage.errorMessage).toContainText('First Name is required');
   });
 
-  test('can cancel checkout and return to cart', async ({ page }) => {
+  test('@regression checkout fails without last name', async ({ page }) => {
+    const cartPage = new CartPage(page);
+    const checkoutPage = new CheckoutPage(page);
+    await cartPage.checkout();
+    await checkoutPage.fillCustomerInfo('John', '', '');
+    await checkoutPage.continue();
+    await expect(checkoutPage.errorMessage).toContainText('Last Name is required');
+  });
+
+  test('@regression checkout fails without zip code', async ({ page }) => {
+    const cartPage = new CartPage(page);
+    const checkoutPage = new CheckoutPage(page);
+    await cartPage.checkout();
+    await checkoutPage.fillCustomerInfo('John', 'Doe', '');
+    await checkoutPage.continue();
+    await expect(checkoutPage.errorMessage).toContainText('Postal Code is required');
+  });
+
+  test('@regression can cancel checkout and return to cart', async ({ page }) => {
     const cartPage = new CartPage(page);
     const checkoutPage = new CheckoutPage(page);
     await cartPage.checkout();
     await checkoutPage.cancel();
     await expect(page).toHaveURL(/cart/);
   });
-
-  test('checkout fails without last name', async ({ page }) => {
-  const cartPage = new CartPage(page);
-  const checkoutPage = new CheckoutPage(page);
-  await cartPage.checkout();
-  await checkoutPage.fillCustomerInfo('John', '', '');
-  await checkoutPage.continue();
-  await expect(checkoutPage.errorMessage).toContainText('Last Name is required');
-});
-
-test('checkout fails without zip code', async ({ page }) => {
-  const cartPage = new CartPage(page);
-  const checkoutPage = new CheckoutPage(page);
-  await cartPage.checkout();
-  await checkoutPage.fillCustomerInfo('John', 'Doe', '');
-  await checkoutPage.continue();
-  await expect(checkoutPage.errorMessage).toContainText('Postal Code is required');
-});
 
 });

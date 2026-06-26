@@ -5,6 +5,8 @@ import { ApiHelper } from '../../helpers/apiHelper.js';
 
 test.describe('Booking CRUD', () => {
 
+  test.setTimeout(60000);
+
   let api;
   let bookingId;
 
@@ -24,7 +26,7 @@ test.describe('Booking CRUD', () => {
     await api.request.dispose();
   });
 
-  test('GET /booking returns list of bookings', async () => {
+  test('@smoke GET /booking returns list of bookings', async () => {
     const response = await api.getBookings();
     expect(response.status()).toBe(200);
     const body = await response.json();
@@ -34,7 +36,7 @@ test.describe('Booking CRUD', () => {
       .toMatchSnapshot('booking-list-shape.json');
   });
 
-  test('GET /booking filters by firstname', async () => {
+  test('@regression GET /booking filters by firstname', async () => {
     const response = await api.request.get('/booking?firstname=James');
     expect(response.status()).toBe(200);
     const body = await response.json();
@@ -43,7 +45,16 @@ test.describe('Booking CRUD', () => {
       .toMatchSnapshot('booking-filter-firstname.json');
   });
 
-  test('GET /booking filters by checkin and checkout dates', async () => {
+  test('@regression GET /booking filters by lastname', async () => {
+    const response = await api.request.get('/booking?lastname=Brown');
+    expect(response.status()).toBe(200);
+    const body = await response.json();
+    expect(Array.isArray(body)).toBe(true);
+    expect(JSON.stringify({ isArray: true, hasResults: body.length >= 0 }))
+      .toMatchSnapshot('booking-filter-lastname.json');
+  });
+
+  test('@regression GET /booking filters by checkin and checkout dates', async () => {
     const response = await api.request.get('/booking?checkin=2026-01-01&checkout=2026-12-31');
     expect(response.status()).toBe(200);
     const body = await response.json();
@@ -52,7 +63,15 @@ test.describe('Booking CRUD', () => {
       .toMatchSnapshot('booking-filter-dates.json');
   });
 
-  test('POST /booking creates a new booking', async () => {
+  test('@regression GET /booking responds within 3 seconds', async () => {
+    const start = Date.now();
+    const response = await api.getBookings();
+    const duration = Date.now() - start;
+    expect(response.status()).toBe(200);
+    expect(duration).toBeLessThan(3000);
+  });
+
+  test('@smoke POST /booking creates a new booking', async () => {
     const response = await api.createBooking(bookings.create);
     expect(response.status()).toBe(200);
     const body = await response.json();
@@ -61,7 +80,15 @@ test.describe('Booking CRUD', () => {
       .toMatchSnapshot('booking-create-response.json');
   });
 
-  test('POST /booking response has correct schema', async () => {
+  test('@regression POST /booking responds within 3 seconds', async () => {
+    const start = Date.now();
+    const response = await api.createBooking(bookings.create);
+    const duration = Date.now() - start;
+    expect(response.status()).toBe(200);
+    expect(duration).toBeLessThan(3000);
+  });
+
+  test('@regression POST /booking response has correct schema', async () => {
     const response = await api.createBooking(bookings.create);
     const body = await response.json();
     const schema = {
@@ -76,7 +103,17 @@ test.describe('Booking CRUD', () => {
     expect(JSON.stringify(schema)).toMatchSnapshot('booking-create-schema.json');
   });
 
-  test('GET /booking/:id returns the created booking', async () => {
+  test('@regression POST /booking with missing required fields returns 500', async ({ request }) => {
+    const response = await request.post('/booking', {
+      data: { firstname: 'John' },
+      headers: { 'Content-Type': 'application/json' },
+    });
+    expect(response.status()).toBe(500);
+    expect(JSON.stringify({ status: 500 }))
+      .toMatchSnapshot('booking-create-invalid.json');
+  });
+
+  test('@regression GET /booking/:id returns the created booking', async () => {
     const response = await api.getBooking(bookingId);
     expect(response.status()).toBe(200);
     const body = await response.json();
@@ -84,14 +121,14 @@ test.describe('Booking CRUD', () => {
     expect(JSON.stringify(body)).toMatchSnapshot('booking-get-by-id.json');
   });
 
-  test('GET /booking/:id with invalid ID returns 404', async () => {
+  test('@regression GET /booking/:id with invalid ID returns 404', async () => {
     const response = await api.getBooking(999999);
     expect(response.status()).toBe(404);
     expect(JSON.stringify({ status: 404 }))
       .toMatchSnapshot('booking-invalid-id.json');
   });
 
-  test('PUT /booking/:id fully updates the booking', async () => {
+  test('@smoke PUT /booking/:id fully updates the booking', async () => {
     const response = await api.updateBooking(bookingId, bookings.update);
     expect(response.status()).toBe(200);
     const body = await response.json();
@@ -99,7 +136,7 @@ test.describe('Booking CRUD', () => {
     expect(JSON.stringify(body)).toMatchSnapshot('booking-put-response.json');
   });
 
-  test('PUT /booking/:id without auth returns 403', async () => {
+  test('@regression PUT /booking/:id without auth returns 403', async () => {
     const response = await api.request.put(`/booking/${bookingId}`, {
       data: bookings.update,
       headers: { 'Content-Type': 'application/json' },
@@ -109,7 +146,17 @@ test.describe('Booking CRUD', () => {
       .toMatchSnapshot('booking-put-no-auth.json');
   });
 
-  test('PATCH /booking/:id partially updates the booking', async () => {
+  test('@regression PUT /booking/:id with invalid ID returns 405', async () => {
+    const response = await api.request.put('/booking/999999', {
+      data: bookings.update,
+      headers: api.authHeaders,
+    });
+    expect(response.status()).toBe(405);
+    expect(JSON.stringify({ status: 405 }))
+      .toMatchSnapshot('booking-put-invalid-id.json');
+  });
+
+  test('@regression PATCH /booking/:id partially updates the booking', async () => {
     const response = await api.partialUpdateBooking(bookingId, bookings.partialUpdate);
     expect(response.status()).toBe(200);
     const body = await response.json();
@@ -117,14 +164,31 @@ test.describe('Booking CRUD', () => {
     expect(JSON.stringify(body)).toMatchSnapshot('booking-patch-response.json');
   });
 
-  test('DELETE /booking/:id without auth returns 403', async () => {
+  test('@regression PATCH /booking/:id without auth returns 403', async () => {
+    const response = await api.request.patch(`/booking/${bookingId}`, {
+      data: bookings.partialUpdate,
+      headers: { 'Content-Type': 'application/json' },
+    });
+    expect(response.status()).toBe(403);
+    expect(JSON.stringify({ status: 403 }))
+      .toMatchSnapshot('booking-patch-no-auth.json');
+  });
+
+  test('@regression DELETE /booking/:id without auth returns 403', async () => {
     const response = await api.request.delete(`/booking/${bookingId}`);
     expect(response.status()).toBe(403);
     expect(JSON.stringify({ status: 403 }))
       .toMatchSnapshot('booking-delete-no-auth.json');
   });
 
-  test('DELETE /booking/:id removes the booking', async () => {
+  test('@regression DELETE /booking/:id with invalid ID returns 405', async () => {
+    const response = await api.deleteBooking(999999);
+    expect(response.status()).toBe(405);
+    expect(JSON.stringify({ status: 405 }))
+      .toMatchSnapshot('booking-delete-invalid-id.json');
+  });
+
+  test('@smoke DELETE /booking/:id removes the booking', async () => {
     const response = await api.deleteBooking(bookingId);
     expect(response.status()).toBe(201);
     expect(JSON.stringify({ status: 201 }))
@@ -132,42 +196,5 @@ test.describe('Booking CRUD', () => {
     const verify = await api.getBooking(bookingId);
     expect(verify.status()).toBe(404);
   });
-
-  test('PATCH /booking/:id without auth returns 403', async () => {
-  const response = await api.request.patch(`/booking/${bookingId}`, {
-    data: bookings.partialUpdate,
-    headers: { 'Content-Type': 'application/json' },
-  });
-  expect(response.status()).toBe(403);
-  expect(JSON.stringify({ status: 403 }))
-    .toMatchSnapshot('booking-patch-no-auth.json');
-});
-
-test('PUT /booking/:id with invalid ID returns 405', async () => {
-  const response = await api.request.put('/booking/999999', {
-    data: bookings.update,
-    headers: api.authHeaders,
-  });
-  expect(response.status()).toBe(405);
-  expect(JSON.stringify({ status: 405 }))
-    .toMatchSnapshot('booking-put-invalid-id.json');
-});
-
-test('DELETE /booking/:id with invalid ID returns 405', async () => {
-  const response = await api.deleteBooking(999999);
-  expect(response.status()).toBe(405);
-  expect(JSON.stringify({ status: 405 }))
-    .toMatchSnapshot('booking-delete-invalid-id.json');
-});
-
-test('POST /booking with missing required fields returns 500', async ({ request }) => {
-  const response = await request.post('/booking', {
-    data: { firstname: 'John' },
-    headers: { 'Content-Type': 'application/json' },
-  });
-  expect(response.status()).toBe(500);
-  expect(JSON.stringify({ status: 500 }))
-    .toMatchSnapshot('booking-create-invalid.json');
-});
 
 });
