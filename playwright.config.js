@@ -19,7 +19,7 @@ export default defineConfig({
   projects: [
     {
       name: 'ui',
-      testMatch: '**/tests/ui/**/*.spec.js',
+      testMatch: '**/tests/ui/**/*.tests.js',
       use: {
         ...devices['Desktop Chrome'],
         baseURL: 'https://www.saucedemo.com',
@@ -28,7 +28,7 @@ export default defineConfig({
     },
     {
       name: 'api',
-      testMatch: '**/tests/api/**/*.spec.js',
+      testMatch: '**/tests/api/**/*.tests.js',
       use: {
         baseURL: 'https://restful-booker.herokuapp.com',
       },
