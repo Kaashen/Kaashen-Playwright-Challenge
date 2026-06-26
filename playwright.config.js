@@ -1,5 +1,4 @@
 import { defineConfig, devices } from '@playwright/test';
-import MCReport from 'monocart-reporter';
 
 export default defineConfig({
   testDir: './tests',
@@ -33,6 +32,7 @@ export default defineConfig({
       use: {
         baseURL: 'https://restful-booker.herokuapp.com',
       },
+      workers: 1,
     },
   ],
 });

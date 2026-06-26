@@ -5,10 +5,10 @@
   "description": "",
   "main": "index.js",
   "scripts": {
-  "test": "playwright test",
-  "test:ui": "playwright test --project=ui",
-  "test:api": "playwright test --project=api",
-  "report": "playwright show-report",
+  "test": "npx playwright test",
+  "test:ui": "npx playwright test --project=ui",
+  "test:api": "npx playwright test --project=api",
+  "report": "npx playwright show-report",
   "report:monocart": "start monocart-report/index.html"
 },
   "keywords": [],
