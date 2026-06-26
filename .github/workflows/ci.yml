@@ -47,6 +47,26 @@ jobs:
           path: monocart-report/
           retention-days: 14
 
+      - name: Send email report
+        uses: dawidd6/action-send-mail@v3
+        if: always()
+        with:
+          server_address: smtp.office365.com
+          server_port: 587
+          username: ${{ secrets.MAIL_USERNAME }}
+          password: ${{ secrets.MAIL_PASSWORD }}
+          subject: "${{ job.status == 'success' && '✅' || '❌' }} Playwright ${{ job.status == 'success' && 'Passed' || 'Failed' }} - ${{ github.job }}"
+          to: kaashenchandra@gmail.com
+          from: ${{ secrets.MAIL_USERNAME }}
+          body: |
+            Job: ${{ github.job }}
+            Status: ${{ job.status }}
+            Branch: ${{ github.ref_name }}
+            Commit: ${{ github.sha }}
+            Run: https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }}
+
+            Download reports from the Actions run link above.
+
   test-api:
     name: API Tests (Restful-Booker)
     runs-on: ubuntu-latest
@@ -86,3 +106,23 @@ jobs:
           name: monocart-report-api
           path: monocart-report/
           retention-days: 14
+
+      - name: Send email report
+        uses: dawidd6/action-send-mail@v3
+        if: always()
+        with:
+          server_address: smtp.office365.com
+          server_port: 587
+          username: ${{ secrets.MAIL_USERNAME }}
+          password: ${{ secrets.MAIL_PASSWORD }}
+          subject: "${{ job.status == 'success' && '✅' || '❌' }} Playwright ${{ job.status == 'success' && 'Passed' || 'Failed' }} - ${{ github.job }}"
+          to: kaashenchandra@gmail.com
+          from: ${{ secrets.MAIL_USERNAME }}
+          body: |
+            Job: ${{ github.job }}
+            Status: ${{ job.status }}
+            Branch: ${{ github.ref_name }}
+            Commit: ${{ github.sha }}
+            Run: https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }}
+
+            Download reports from the Actions run link above.
