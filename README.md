@@ -64,4 +64,4 @@ start monocart-report/index.html
 Tests run automatically on every push and pull request via GitHub Actions.
 The HTML report is uploaded as a workflow artifact — downloadable from the Actions tab.
 
-![CI](https://github.com/YOUR_USERNAME/YOUR_REPO_NAME/actions/workflows/ci.yml/badge.svg)
+![CI](https://github.com/Kaashen/Kaashen-Playwright-Challenge/actions/workflows/ci.yml/badge.svg)
