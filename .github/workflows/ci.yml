@@ -47,25 +47,6 @@ jobs:
           path: monocart-report/
           retention-days: 14
 
-      - name: Send UI test report email
-        uses: dawidd6/action-send-mail@v3
-        if: always()
-        with:
-          server_address: smtp.gmail.com
-          server_port: 465
-          username: ${{ secrets.MAIL_USERNAME }}
-          password: ${{ secrets.MAIL_PASSWORD }}
-          subject: "${{ job.status == 'success' && '✅' || '❌' }} UI Tests – ${{ github.repository }}"
-          to: ${{ secrets.MAIL_TO }}
-          from: ${{ secrets.MAIL_USERNAME }}
-          body: |
-            Job: UI Tests (SauceDemo)
-            Status: ${{ job.status }}
-            Branch: ${{ github.ref_name }}
-            Commit: ${{ github.sha }}
-            Run: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
-          attachments: monocart-report/index.html
-
   test-api:
     name: API Tests (Restful-Booker)
     runs-on: ubuntu-latest
@@ -119,21 +100,56 @@ jobs:
           path: monocart-report/
           retention-days: 14
 
-      - name: Send API test report email
+  notify:
+    name: Send Test Reports
+    runs-on: ubuntu-latest
+    needs: [test-ui, test-api]
+    if: always()
+
+    steps:
+      - name: Download UI Playwright report
+        uses: actions/download-artifact@v4
+        with:
+          name: playwright-report-ui
+          path: reports/playwright-ui/
+
+      - name: Download UI Monocart report
+        uses: actions/download-artifact@v4
+        with:
+          name: monocart-report-ui
+          path: reports/monocart-ui/
+
+      - name: Download API Playwright report
+        uses: actions/download-artifact@v4
+        with:
+          name: playwright-report-api
+          path: reports/playwright-api/
+
+      - name: Download API Monocart report
+        uses: actions/download-artifact@v4
+        with:
+          name: monocart-report-api
+          path: reports/monocart-api/
+
+      - name: Send combined test report email
         uses: dawidd6/action-send-mail@v3
-        if: always()
         with:
           server_address: smtp.gmail.com
           server_port: 465
           username: ${{ secrets.MAIL_USERNAME }}
           password: ${{ secrets.MAIL_PASSWORD }}
-          subject: "${{ job.status == 'success' && '✅' || '❌' }} API Tests – ${{ github.repository }}"
+          subject: "🎭 Playwright Test Reports – ${{ github.repository }}"
           to: ${{ secrets.MAIL_TO }}
           from: ${{ secrets.MAIL_USERNAME }}
           body: |
-            Job: API Tests (Restful-Booker)
-            Status: ${{ job.status }}
+            UI Tests:  ${{ needs.test-ui.result }}
+            API Tests: ${{ needs.test-api.result }}
+
             Branch: ${{ github.ref_name }}
             Commit: ${{ github.sha }}
             Run: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
-          attachments: monocart-report/index.html
+          attachments: >-
+            reports/playwright-ui/index.html,
+            reports/monocart-ui/index.html,
+            reports/playwright-api/index.html,
+            reports/monocart-api/index.html
