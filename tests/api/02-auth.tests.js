@@ -40,4 +40,13 @@ test.describe('Authentication', () => {
     expect(JSON.stringify(body)).toMatchSnapshot('auth-missing-password-response.json');
   });
 
+  test('missing username field returns error', async ({ request }) => {
+  const response = await request.post('/auth', {
+    data: { password: 'password123' },
+  });
+  const body = await response.json();
+  expect(body.reason).toBe('Bad credentials');
+  expect(JSON.stringify(body)).toMatchSnapshot('auth-missing-username-response.json');
+});
+
 });

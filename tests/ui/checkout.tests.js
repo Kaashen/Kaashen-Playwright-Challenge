@@ -44,4 +44,22 @@ test.describe('Checkout', () => {
     await expect(page).toHaveURL(/cart/);
   });
 
+  test('checkout fails without last name', async ({ page }) => {
+  const cartPage = new CartPage(page);
+  const checkoutPage = new CheckoutPage(page);
+  await cartPage.checkout();
+  await checkoutPage.fillCustomerInfo('John', '', '');
+  await checkoutPage.continue();
+  await expect(checkoutPage.errorMessage).toContainText('Last Name is required');
+});
+
+test('checkout fails without zip code', async ({ page }) => {
+  const cartPage = new CartPage(page);
+  const checkoutPage = new CheckoutPage(page);
+  await cartPage.checkout();
+  await checkoutPage.fillCustomerInfo('John', 'Doe', '');
+  await checkoutPage.continue();
+  await expect(checkoutPage.errorMessage).toContainText('Postal Code is required');
+});
+
 });

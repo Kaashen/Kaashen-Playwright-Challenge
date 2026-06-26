@@ -37,4 +37,11 @@ test.describe('Authentication', () => {
     await expect(loginPage.loginButton).toBeVisible();
   });
 
+  test('empty credentials show error', async ({ page }) => {
+  const loginPage = new LoginPage(page);
+  await loginPage.goto();
+  await loginPage.login('', '');
+  await expect(loginPage.errorMessage).toContainText('Username is required');
+});
+
 });

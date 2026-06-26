@@ -133,4 +133,41 @@ test.describe('Booking CRUD', () => {
     expect(verify.status()).toBe(404);
   });
 
+  test('PATCH /booking/:id without auth returns 403', async () => {
+  const response = await api.request.patch(`/booking/${bookingId}`, {
+    data: bookings.partialUpdate,
+    headers: { 'Content-Type': 'application/json' },
+  });
+  expect(response.status()).toBe(403);
+  expect(JSON.stringify({ status: 403 }))
+    .toMatchSnapshot('booking-patch-no-auth.json');
+});
+
+test('PUT /booking/:id with invalid ID returns 405', async () => {
+  const response = await api.request.put('/booking/999999', {
+    data: bookings.update,
+    headers: api.authHeaders,
+  });
+  expect(response.status()).toBe(405);
+  expect(JSON.stringify({ status: 405 }))
+    .toMatchSnapshot('booking-put-invalid-id.json');
+});
+
+test('DELETE /booking/:id with invalid ID returns 405', async () => {
+  const response = await api.deleteBooking(999999);
+  expect(response.status()).toBe(405);
+  expect(JSON.stringify({ status: 405 }))
+    .toMatchSnapshot('booking-delete-invalid-id.json');
+});
+
+test('POST /booking with missing required fields returns 500', async ({ request }) => {
+  const response = await request.post('/booking', {
+    data: { firstname: 'John' },
+    headers: { 'Content-Type': 'application/json' },
+  });
+  expect(response.status()).toBe(500);
+  expect(JSON.stringify({ status: 500 }))
+    .toMatchSnapshot('booking-create-invalid.json');
+});
+
 });

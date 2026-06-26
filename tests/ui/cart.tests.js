@@ -41,4 +41,14 @@ test.describe('Shopping Cart', () => {
     expect(await cartPage.getItemName()).toBe('Sauce Labs Backpack');
   });
 
+  test('remove item from cart page', async ({ page }) => {
+  const inventoryPage = new InventoryPage(page);
+  const cartPage = new CartPage(page);
+  await inventoryPage.addToCartByName('sauce-labs-backpack');
+  await cartPage.goto();
+  await page.locator('[data-test="remove-sauce-labs-backpack"]').click();
+  expect(await cartPage.getItemCount()).toBe(0);
+  await expect(inventoryPage.cartBadge).not.toBeVisible();
+});
+
 });
